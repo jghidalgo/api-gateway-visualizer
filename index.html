@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AWS API Gateway Visualizer</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <h1>AWS API Gateway Visualizer</h1>
+                <p>Interactive demonstration of API Gateway request flow, authentication, throttling, and integrations</p>
+            </header>
+
+            <div class="api-controls">
+                <div class="request-builder">
+                    <h3>Build API Request</h3>
+                    <div class="request-form">
+                        <div class="form-row">
+                            <select id="http-method">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                            </select>
+                            <input type="text" id="api-path" placeholder="/users/{id}" value="/users/123" />
+                            <button onclick="sendRequest()" class="btn-send">Send Request</button>
+                        </div>
+                        <div class="form-row">
+                            <input type="text" id="auth-token" placeholder="Authorization Token (optional)" />
+                            <select id="request-source">
+                                <option value="web">Web Client</option>
+                                <option value="mobile">Mobile App</option>
+                                <option value="api">API Client</option>
+                                <option value="bot">Bot/Scraper</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gateway-config">
+                    <h3>Gateway Configuration</h3>
+                    <div class="config-options">
+                        <label>
+                            <input type="checkbox" id="enable-auth" checked />
+                            Enable Authentication
+                        </label>
+                        <label>
+                            <input type="checkbox" id="enable-throttling" checked />
+                            Enable Throttling (10 req/sec)
+                        </label>
+                        <label>
+                            <input type="checkbox" id="enable-caching" />
+                            Enable Caching (300s TTL)
+                        </label>
+                        <label>
+                            <input type="checkbox" id="enable-cors" checked />
+                            Enable CORS
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="request-stats">
+                <div class="stat-card">
+                    <span class="stat-label">Total Requests:</span>
+                    <span class="stat-value" id="total-requests">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Successful (2xx):</span>
+                    <span class="stat-value" id="success-requests">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Throttled (429):</span>
+                    <span class="stat-value" id="throttled-requests">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Cache Hits:</span>
+                    <span class="stat-value" id="cache-hits">0</span>
+                </div>
+            </div>
+
+            <div class="request-flow">
+                <h3>Request Flow Visualization</h3>
+                <div class="flow-diagram">
+                    <div class="flow-step client-step">
+                        <div class="step-title">Client</div>
+                        <div class="step-status" id="client-status">Ready</div>
+                    </div>
+
+                    <div class="flow-arrow">→</div>
+
+                    <div class="flow-step gateway-step">
+                        <div class="step-title">API Gateway</div>
+                        <div class="step-status" id="gateway-status">Waiting</div>
+                        <div class="step-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Auth:</span>
+                                <span class="detail-value" id="auth-result">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Throttle:</span>
+                                <span class="detail-value" id="throttle-result">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Cache:</span>
+                                <span class="detail-value" id="cache-result">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-arrow">→</div>
+
+                    <div class="flow-step backend-step">
+                        <div class="step-title">Backend</div>
+                        <div class="step-status" id="backend-status">Idle</div>
+                        <div class="backend-type" id="backend-type">Lambda Function</div>
+                    </div>
+
+                    <div class="flow-arrow">←</div>
+
+                    <div class="flow-step response-step">
+                        <div class="step-title">Response</div>
+                        <div class="step-status" id="response-status">-</div>
+                        <div class="response-code" id="response-code">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="integration-types">
+                <h3>Backend Integration Types</h3>
+                <div class="integration-cards">
+                    <div class="integration-card active" data-type="lambda">
+                        <h4>Lambda Function</h4>
+                        <div class="integration-details">
+                            <div class="detail">Serverless execution</div>
+                            <div class="detail">Auto-scaling</div>
+                            <div class="detail">Pay per request</div>
+                            <div class="detail">~100ms latency</div>
+                        </div>
+                    </div>
+
+                    <div class="integration-card" data-type="http">
+                        <h4>HTTP Endpoint</h4>
+                        <div class="integration-details">
+                            <div class="detail">External API</div>
+                            <div class="detail">Existing services</div>
+                            <div class="detail">Request/Response mapping</div>
+                            <div class="detail">Variable latency</div>
+                        </div>
+                    </div>
+
+                    <div class="integration-card" data-type="aws-service">
+                        <h4>AWS Service</h4>
+                        <div class="integration-details">
+                            <div class="detail">DynamoDB</div>
+                            <div class="detail">SES/SNS</div>
+                            <div class="detail">S3 Operations</div>
+                            <div class="detail">~50ms latency</div>
+                        </div>
+                    </div>
+
+                    <div class="integration-card" data-type="mock">
+                        <h4>Mock Integration</h4>
+                        <div class="integration-details">
+                            <div class="detail">Testing/Development</div>
+                            <div class="detail">Static responses</div>
+                            <div class="detail">No backend needed</div>
+                            <div class="detail">~10ms latency</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="request-log">
+                <h3>Request Log</h3>
+                <div class="log-controls">
+                    <button onclick="clearLog()" class="btn-clear">Clear Log</button>
+                    <label>
+                        <input type="checkbox" id="show-details" checked />
+                        Show Details
+                    </label>
+                </div>
+                <div class="log-content" id="log-content">
+                    <div class="log-entry">Ready to process API requests...</div>
+                </div>
+            </div>
+
+            <div class="features-section">
+                <div class="feature-card">
+                    <h3>Authentication & Authorization</h3>
+                    <div class="feature-content">
+                        <div class="auth-types">
+                            <div class="auth-type"><strong>API Keys:</strong> Simple authentication for public APIs</div>
+                            <div class="auth-type"><strong>IAM Roles:</strong> AWS service-to-service authentication</div>
+                            <div class="auth-type"><strong>Cognito:</strong> User pools and identity federation</div>
+                            <div class="auth-type"><strong>Lambda Authorizers:</strong> Custom authentication logic</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Throttling & Rate Limiting</h3>
+                    <div class="feature-content">
+                        <div class="throttling-info">
+                            <div class="throttle-item"><strong>Burst Limit:</strong> Handle traffic spikes (up to 5,000 req/sec)</div>
+                            <div class="throttle-item"><strong>Rate Limit:</strong> Sustained requests per second</div>
+                            <div class="throttle-item"><strong>Usage Plans:</strong> Different limits per API key/client</div>
+                            <div class="throttle-item"><strong>429 Response:</strong> Automatic throttling when limits exceeded</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Caching</h3>
+                    <div class="feature-content">
+                        <div class="caching-info">
+                            <div class="cache-item"><strong>Response Caching:</strong> Cache backend responses (0.5GB - 237GB)</div>
+                            <div class="cache-item"><strong>TTL Control:</strong> Configurable time-to-live (0-3600 seconds)</div>
+                            <div class="cache-item"><strong>Cache Keys:</strong> Customize what makes responses unique</div>
+                            <div class="cache-item"><strong>Performance:</strong> Reduce latency and backend load</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-examples">
+                <h3>Implementation Examples</h3>
+                <div class="code-tabs">
+                    <button class="code-tab active" data-tab="terraform">Terraform</button>
+                    <button class="code-tab" data-tab="cloudformation">CloudFormation</button>
+                    <button class="code-tab" data-tab="sdk">AWS SDK</button>
+                </div>
+                <div class="code-content">
+                    <pre id="terraform-code"><code># API Gateway with Lambda integration
+resource "aws_api_gateway_rest_api" "api" {
+  name = "my-api"
+  
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+}
+
+resource "aws_api_gateway_resource" "users" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  path_part   = "users"
+}
+
+resource "aws_api_gateway_method" "get_users" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.users.id
+  http_method   = "GET"
+  authorization = "AWS_IAM"
+  
+  request_parameters = {
+    "method.request.querystring.limit" = false
+  }
+}
+
+resource "aws_api_gateway_integration" "lambda" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  resource_id = aws_api_gateway_resource.users.id
+  http_method = aws_api_gateway_method.get_users.http_method
+  
+  integration_http_method = "POST"
+  type                   = "AWS_PROXY"
+  uri                    = aws_lambda_function.handler.invoke_arn
+}</code></pre>
+
+                    <pre id="cloudformation-code" style="display: none"><code>AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  MyApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: my-api
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+  
+  UsersResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyApi
+      ParentId: !GetAtt MyApi.RootResourceId
+      PathPart: users
+  
+  GetUsersMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MyApi
+      ResourceId: !Ref UsersResource
+      HttpMethod: GET
+      AuthorizationType: AWS_IAM
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - Region: !Ref AWS::Region
+            LambdaArn: !GetAtt MyLambda.Arn
+  
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: GetUsersMethod
+    Properties:
+      RestApiId: !Ref MyApi
+      StageName: prod</code></pre>
+
+                    <pre id="sdk-code" style="display: none"><code>// Create API Gateway client
+const apigateway = new AWS.APIGateway();
+
+// Create REST API
+const api = await apigateway.createRestApi({
+  name: 'my-api',
+  endpointConfiguration: {
+    types: ['REGIONAL']
+  }
+}).promise();
+
+// Create resource
+const resource = await apigateway.createResource({
+  restApiId: api.id,
+  parentId: api.rootResourceId,
+  pathPart: 'users'
+}).promise();
+
+// Create method
+await apigateway.putMethod({
+  restApiId: api.id,
+  resourceId: resource.id,
+  httpMethod: 'GET',
+  authorizationType: 'AWS_IAM'
+}).promise();
+
+// Create integration
+await apigateway.putIntegration({
+  restApiId: api.id,
+  resourceId: resource.id,
+  httpMethod: 'GET',
+  type: 'AWS_PROXY',
+  integrationHttpMethod: 'POST',
+  uri: `arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations`
+}).promise();
+
+// Deploy API
+await apigateway.createDeployment({
+  restApiId: api.id,
+  stageName: 'prod'
+}).promise();</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <script src="script.js"></script>
+    </body>
+</html>
